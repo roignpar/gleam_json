@@ -43,6 +43,16 @@ pub fn parse(
   do_parse(from: json, using: decoder)
 }
 
+pub fn parse_with_precise_numbers(
+  json: String,
+  decoder: decode.Decoder(t),
+) -> Result(t, DecodeError) {
+  let json = bit_array.from_string(json)
+  use dynamic_value <- result.try(decode_to_dynamic_with_precise_numbers(json))
+  decode.run(dynamic_value, decoder)
+  |> result.map_error(UnableToDecode)
+}
+
 @target(erlang)
 fn do_parse(
   from json: String,
@@ -93,6 +103,11 @@ pub fn parse_bits(
   decode.run(dynamic_value, decoder)
   |> result.map_error(UnableToDecode)
 }
+
+@external(erlang, "gleam_json_ffi", "decode_with_precise_numbers")
+fn decode_to_dynamic_with_precise_numbers(
+  json: BitArray,
+) -> Result(Dynamic, DecodeError)
 
 @external(erlang, "gleam_json_ffi", "decode")
 fn decode_to_dynamic(json: BitArray) -> Result(Dynamic, DecodeError) {

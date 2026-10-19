@@ -1,8 +1,8 @@
 -module(gleam_json_ffi).
 
 -export([
-    decode/1, json_to_iodata/1, json_to_string/1, int/1, float/1, string/1,
-    bool/1, null/0, array/1, object/1
+    decode/1, decode_with_precise_numbers/1, json_to_iodata/1, json_to_string/1,
+    int/1, float/1, string/1, bool/1, null/0, array/1, object/1
 ]).
 
 -if(?OTP_RELEASE < 27).
@@ -29,6 +29,20 @@ null()  -> ?bad_version.
 decode(Json) ->
     try
         {ok, json:decode(Json)}
+    catch
+        error:unexpected_end -> {error, unexpected_end_of_input};
+        error:{invalid_byte, Byte} -> {error, {unexpected_byte, hex(Byte)}};
+        error:{unexpected_sequence, Byte} -> {error, {unexpected_sequence, Byte}}
+    end.
+
+decode_with_precise_numbers(Json) ->
+    Decoders = #{
+        float => fun(Bin) -> Bin end,
+        integer => fun(Bin) -> Bin end
+    },
+    try json:decode(Json, ok, Decoders) of
+        {Value, ok, <<>>} -> {ok, Value};
+        {_Value, ok, _Rest} -> {error, {unexpected_sequence, <<"trailing data">>}}
     catch
         error:unexpected_end -> {error, unexpected_end_of_input};
         error:{invalid_byte, Byte} -> {error, {unexpected_byte, hex(Byte)}};
